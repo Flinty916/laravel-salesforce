@@ -1,0 +1,38 @@
+{
+    "name": "flinty916/laravel-salesforce",
+    "description": "Salesforce Integration package for the Laravel framework",
+    "keywords": [
+        "php",
+        "github",
+        "laravel",
+        "Open Source",
+        "action",
+        "service",
+        "traits",
+        "generator",
+        "command",
+        "laravel 12"
+    ],
+    "require": {
+        "guzzlehttp/guzzle": "^7.9"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Flinty916\\LaravelSalesforce\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Ethan Mullan"
+        }
+    ],
+    "minimum-stability": "stable",
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Flinty916\\LaravelSalesforce\\SalesforceServiceProvider"
+            ]
+        }
+    }
+}

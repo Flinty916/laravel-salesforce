@@ -1,0 +1,13 @@
+<?php
+
+namespace App\SalesforceObjects;
+
+use Flinty916\LaravelSalesforce\SalesforceObjects\SalesforceModel;
+
+/**
+{{properties}}
+ */
+class {{class}} extends SalesforceModel
+{
+    protected static string $object = '{{object}}';
+}
