@@ -45,22 +45,22 @@ class GenerateSalesforceObjects extends Command
             ->filter()
             ->map(fn($s) => ucwords($s));
 
-        $sobjects = $client->get('/sobjects')['sobjects'];
+        $sobjects = ((array)$client->get('/sobjects'))['sobjects'];
 
         foreach ($sobjects as $object) {
-            $name = $object['name'];
+            $name = $object->name;
 
-            $className = preg_replace('/[^A-Za-z0-9]/', '', $name);
-
-            if ($only->isNotEmpty() && !$only->contains($className)) {
+            $nameWithoutSuffix = preg_replace('/__c$/', '', $name);
+            $className = str_replace('_', '', ucwords($nameWithoutSuffix, '_'));
+            if ($only->isNotEmpty() && !$only->contains($name)) {
                 continue;
             }
 
-            $describe = $client->get("/sobjects/{$name}/describe")->json();
+            $describe = (array) $client->get("/sobjects/{$name}/describe");
             $fields = [];
             foreach ($describe['fields'] as $field) {
-                $type = $this->sfTypeToPhpType($field['type']) ?? null;
-                $fields[] = " * @property {$type} \${$field['name']}";
+                $type = $this->sfTypeToPhpType($field->type) ?? null;
+                $fields[] = " * @property {$type} \${$field->name}";
             }
 
             $stub = File::get($stubPath);

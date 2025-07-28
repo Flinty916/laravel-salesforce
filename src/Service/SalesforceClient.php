@@ -67,11 +67,10 @@ class SalesforceClient
         return $response;
     }
 
+
     public function get(string $uri, array $query = [])
     {
-        Log::debug(json_encode($query));
-        $url = rtrim($this->instanceUrl, '/') . '/services/data/v' . config('salesforce.api_version') . $uri;
-        Log::debug($url);
+        $url = rtrim($this->instanceUrl, '/') . $uri;
         $response = Http::withToken($this->accessToken)
             ->acceptJson()
             ->get($url, $query);

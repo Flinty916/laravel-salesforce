@@ -29,7 +29,7 @@ class SalesforceQueryBuilder
         return $this;
     }
 
-    public function where(string|array $field, string $operator = null, mixed $value = null): self
+    public function where(string|array $field, string|null $operator = null, mixed $value = null): self
     {
         if (is_array($field)) {
             foreach ($field as $condition) {
@@ -67,21 +67,54 @@ class SalesforceQueryBuilder
         return $this;
     }
 
-    public function get(): self
+    public function get(string|null $url = null): self
     {
         $client = app(SalesforceClient::class);
-        $response = $client->get('/query/', ['q' => $this->buildSoql()]);
+        if ($url) {
+            $response = $client->get($url);
+        } else {
+            $response = $client->get('/services/data/v' . config('salesforce.api_version') . '/query/', ['q' => $this->buildSoql()]);
+        }
 
-        if ($response->records && $response->totalSize != 0)
-            $this->records = collect($response->records);
+        if ($response->records && $response->totalSize != 0) {
+            if ($this->records == null)
+                $this->records = collect($response->records);
+            else
+                $this->records = $this->records->merge($response->records);
+        }
+
+        if (isset($response->nextRecordsUrl))
+            $this->nextPage = $response->nextRecordsUrl;
+        else
+            $this->nextPage = null;
         $this->total = $response->totalSize;
 
         return $this;
     }
 
+    public function all(): self
+    {
+        $this->get();
+        if ($this->nextPage) {
+            $url = $this->nextPage;
+            while ($url) {
+                $this->get($this->nextPage);
+                $url = $this->nextPage;
+            }
+        }
+        return $this;
+    }
+
     public function records(): Collection
     {
-        return $this->records;
+        $mapped = collect([]);
+        if (!isset($this->records) || $this->total() == 0)
+            return collect([]);
+        foreach ($this->records as $record) {
+            unset($record->attributes);
+            $mapped[] = $record;
+        }
+        return $mapped;
     }
 
     public function total(): int
@@ -121,6 +154,8 @@ class SalesforceQueryBuilder
         if ($this->limit !== null) {
             $query .= " LIMIT {$this->limit}";
         }
+
+        Log::debug($query);
 
         return $query;
     }
