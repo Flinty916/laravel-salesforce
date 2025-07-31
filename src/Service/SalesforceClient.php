@@ -2,9 +2,13 @@
 
 namespace Flinty916\LaravelSalesforce\Service;
 
+use Flinty916\LaravelSalesforce\Exceptions\SalesforceValidationException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
+use stdClass;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 class SalesforceClient
 {
@@ -71,6 +75,8 @@ class SalesforceClient
     public function get(string $uri, array $query = [])
     {
         $url = rtrim($this->instanceUrl, '/') . $uri;
+        Log::debug($this->accessToken);
+        Log::debug($url);
         $response = Http::withToken($this->accessToken)
             ->acceptJson()
             ->get($url, $query);
@@ -78,9 +84,23 @@ class SalesforceClient
         return json_decode($response->body());
     }
 
-    public function post(string $uri, array $data = [])
+    public function post(string $uri, array|stdClass $data)
     {
-        return $this->request('post', $uri, $data);
+        $url = rtrim($this->instanceUrl, '/') . $uri;
+        Log::debug($url);
+        Log::debug(json_encode($data));
+        $response = Http::withToken($this->accessToken)
+            ->contentType('application/json')
+            ->acceptJson()
+            ->post($url, $data);
+        Log::debug(json_encode($response->body(), JSON_PRETTY_PRINT));
+        if ($response->status() == 400) {
+            $errorResponse = json_decode($response->body(), true)[0];
+            throw new SalesforceValidationException($errorResponse['message'], $errorResponse['fields'], 400);
+        }
+        Log::debug("STATUS: " . $response->status() . " - " . $response->ok());
+        throw_if($response->status() > 399, \Exception::class, 'Salesforce POST failed: ' . $response->body());
+        return json_decode($response->body());
     }
 
     public function put(string $uri, array $data = [])

@@ -4,6 +4,7 @@ namespace Flinty916\LaravelSalesforce\SalesforceObjects;
 
 use Flinty916\LaravelSalesforce\Service\SalesforceClient;
 use Illuminate\Support\Collection;
+use stdClass;
 
 abstract class SalesforceModel
 {
@@ -53,5 +54,10 @@ abstract class SalesforceModel
     public static function records(): Collection
     {
         return static::query()->records();
+    }
+
+    public static function create(array|stdClass $data): string
+    {
+        return (self::client()->post('/services/data/v' . config('salesforce.api_version') . '/sobjects/' . static::$object, $data))->id;
     }
 }
