@@ -10,4 +10,7 @@ use Flinty916\LaravelSalesforce\SalesforceObjects\SalesforceModel;
 class {{class}} extends SalesforceModel
 {
     protected static string $object = '{{object}}';
+
+    /** @var array<string,string> */
+    protected static array $casts = {{casts}};
 }

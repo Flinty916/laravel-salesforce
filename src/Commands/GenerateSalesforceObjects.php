@@ -8,23 +8,9 @@ use Illuminate\Support\Facades\File;
 
 class GenerateSalesforceObjects extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'salesforce:generate-objects {--objects=}';
-
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
     protected $description = 'Generate classes for all Salesforce objects';
 
-    /**
-     * Execute the console command.
-     */
     public function handle()
     {
         $client = app(SalesforceClient::class);
@@ -33,40 +19,54 @@ class GenerateSalesforceObjects extends Command
 
         if (!File::exists($stubPath)) {
             $this->error("Stub file missing at: $stubPath");
-            return;
+            return self::FAILURE;
         }
 
         if (!File::exists($outputPath)) {
             File::makeDirectory($outputPath, 0755, true);
         }
 
-        $only = collect(explode(',', $this->option('objects')))
+        $only = collect(explode(',', (string) $this->option('objects')))
             ->map(fn($s) => trim($s))
-            ->filter()
-            ->map(fn($s) => ucwords($s));
+            ->filter() // remove empties
+            ->values();
 
-        $sobjects = ((array)$client->get('/sobjects'))['sobjects'];
+        $sobjects = ((array) $client->get('/services/data/v' . config('salesforce.api_version') . '/sobjects'))['sobjects'] ?? [];
 
         foreach ($sobjects as $object) {
-            $name = $object->name;
+            $name = $object->name; // e.g. Eye_Exam__c
 
-            $nameWithoutSuffix = preg_replace('/__c$/', '', $name);
-            $className = str_replace('_', '', ucwords($nameWithoutSuffix, '_'));
             if ($only->isNotEmpty() && !$only->contains($name)) {
                 continue;
             }
 
-            $describe = (array) $client->get("/sobjects/{$name}/describe");
-            $fields = [];
-            foreach ($describe['fields'] as $field) {
-                $type = $this->sfTypeToPhpType($field->type) ?? null;
-                $fields[] = " * @property {$type} \${$field->name}";
+            // Class name: remove __c and snake underscores
+            $nameWithoutSuffix = preg_replace('/__c$/', '', $name);
+            $className = str_replace('_', '', ucwords($nameWithoutSuffix, '_'));
+
+            $describe = (array) $client->get("/services/data/v" . config('salesforce.api_version') . "/sobjects/{$name}/describe");
+            $fieldsForDoc = [];
+            $casts = [];
+            $constants = [];
+
+            foreach ($describe['fields'] ?? [] as $field) {
+                $sfType = $field->type ?? null;
+                $phpDocType = $this->sfTypeToPhpType($sfType) ?? 'mixed';
+                $fieldsForDoc[] = " * @property {$phpDocType} \${$field->name}";
+
+                if ($cast = $this->sfTypeToCast($sfType)) {
+                    $casts[$field->name] = $cast;
+                }
             }
+
+            // Pretty-print casts with short array syntax
+            $castsExport = $this->exportArrayShort($casts);
+            $constantsCode = implode("\n\t", $constants);
 
             $stub = File::get($stubPath);
             $contents = str_replace(
-                ['{{class}}', '{{object}}', '{{properties}}'],
-                [$className, $name, implode("\n", $fields)],
+                ['{{class}}', '{{object}}', '{{properties}}', '{{casts}}', '{{constants}}'],
+                [$className, $name, implode("\n", $fieldsForDoc), $castsExport, $constantsCode],
                 $stub
             );
 
@@ -75,53 +75,54 @@ class GenerateSalesforceObjects extends Command
         }
 
         $this->info('Model generation complete.');
+        return self::SUCCESS;
     }
 
-    private function sfTypeToPhpType($type): string|null
+    private function sfTypeToPhpType(?string $type): ?string
     {
-        switch ($type) {
-            case 'id':
-                $type = 'string';
-                break;
-            case 'string':
-                $type = 'string';
-                break;
-            case 'phone':
-                $type = 'string';
-                break;
-            case 'url':
-                $type = 'string';
-                break;
-            case 'textarea':
-                $type = 'string';
-                break;
-            case 'picklist':
-                $type = 'string';
-                break;
-            case 'boolean':
-                $type = 'bool';
-                break;
-            case 'int':
-                $type = 'int';
-                break;
-            case 'double':
-                $type = 'float';
-                break;
-            case 'currency':
-                $type = 'string';
-                break;
-            case 'percent':
-                $type = 'float';
-                break;
-            case 'date':
-                $type = '\Carbon\Carbon|null';
-                break;
-            case 'datetime':
-                $type = '\Carbon\Carbon|null';
-                break;
-            default:
-                return null;
+        return match ($type) {
+            'id', 'string', 'phone', 'url', 'textarea', 'picklist', 'currency' => 'string',
+            'boolean' => 'bool',
+            'int'     => 'int',
+            'double'  => 'float',
+            'percent' => 'float',
+            'date'    => '\Carbon\Carbon|null',
+            'datetime' => '\Carbon\Carbon|null',
+            default   => null,
+        };
+    }
+
+    private function sfTypeToCast(?string $type): ?string
+    {
+        return match ($type) {
+            'id', 'string', 'phone', 'url', 'textarea', 'picklist', 'currency' => 'string',
+            'boolean' => 'bool',
+            'int'     => 'int',
+            'double'  => 'float',
+            'percent' => 'float',
+            'date'    => 'date',
+            'datetime' => 'datetime',
+            default   => null, // leave as-is
+        };
+    }
+
+    /**
+     * Export an array as a short-notation PHP array without class names,
+     * stable key ordering for cleaner diffs.
+     */
+    private function exportArrayShort(array $arr): string
+    {
+        ksort($arr);
+        $parts = [];
+        foreach ($arr as $k => $v) {
+            // keys are SF field names; always quote
+            $k = var_export($k, true);
+            $v = var_export($v, true);
+            $parts[] = "    {$k} => {$v},";
         }
-        return $type;
+        if (empty($parts)) {
+            return "[]";
+        }
+        return "[\n" . implode("\n", $parts) . "\n]";
     }
 }
