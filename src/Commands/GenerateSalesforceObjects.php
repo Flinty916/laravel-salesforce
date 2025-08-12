@@ -28,19 +28,18 @@ class GenerateSalesforceObjects extends Command
 
         $only = collect(explode(',', (string) $this->option('objects')))
             ->map(fn($s) => trim($s))
-            ->filter() // remove empties
+            ->filter()
             ->values();
 
         $sobjects = ((array) $client->get('/services/data/v' . config('salesforce.api_version') . '/sobjects'))['sobjects'] ?? [];
 
         foreach ($sobjects as $object) {
-            $name = $object->name; // e.g. Eye_Exam__c
+            $name = $object->name;
 
             if ($only->isNotEmpty() && !$only->contains($name)) {
                 continue;
             }
 
-            // Class name: remove __c and snake underscores
             $nameWithoutSuffix = preg_replace('/__c$/', '', $name);
             $className = str_replace('_', '', ucwords($nameWithoutSuffix, '_'));
 
@@ -59,7 +58,6 @@ class GenerateSalesforceObjects extends Command
                 }
             }
 
-            // Pretty-print casts with short array syntax
             $castsExport = $this->exportArrayShort($casts);
             $constantsCode = implode("\n\t", $constants);
 
@@ -118,7 +116,7 @@ class GenerateSalesforceObjects extends Command
             // keys are SF field names; always quote
             $k = var_export($k, true);
             $v = var_export($v, true);
-            $parts[] = "    {$k} => {$v},";
+            $parts[] = "\t\t{$k} => {$v},";
         }
         if (empty($parts)) {
             return "[]";
