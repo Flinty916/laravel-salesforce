@@ -4,12 +4,14 @@ namespace Flinty916\LaravelSalesforce\SalesforceObjects;
 
 use Flinty916\LaravelSalesforce\Service\SalesforceClient;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use stdClass;
 
 abstract class SalesforceModel
 {
 
     protected static string $object = "";
+    public ?string $Id = null;
 
     protected static function client(): SalesforceClient
     {
@@ -51,13 +53,47 @@ abstract class SalesforceModel
         return static::query()->get();
     }
 
+    public static function find(string $id): ?static
+    {
+        $record = static::query()
+            ->fields(['FIELDS(ALL)'])
+            ->where('Id', '=', $id)
+            ->limit(1)
+            ->first();
+
+        if (!$record) {
+            return null;
+        }
+
+        $model = new static();
+        foreach ($record as $key => $value) {
+            $model->{$key} = $value;
+        }
+
+        return $model;
+    }
+
     public static function records(): Collection
     {
         return static::query()->records();
     }
 
-    public static function create(array|stdClass $data): string
+    public static function create(array|stdClass $data): ?static
     {
-        return (self::client()->post('/services/data/v' . config('salesforce.api_version') . '/sobjects/' . static::$object, $data))->id;
+        $response = (self::client()->post('/services/data/v' . config('salesforce.api_version') . '/sobjects/' . static::$object, $data))->id;
+        $model = new static();
+        $model->Id = $response;
+        return $model;
+    }
+
+    public function update(array|stdClass $data): void
+    {
+        $this->client()->put('/services/data/v' . config('salesforce.api_version') . '/sobjects/' . static::$object . '/' . $this->Id, $data);
+    }
+
+    public function delete(): void
+    {
+        $response = $this->client()->delete('/services/data/v' . config('salesforce.api_version') . '/sobjects/' . static::$object . '/' . $this->Id);
+        Log::debug("DELETE: " . json_encode($response, JSON_PRETTY_PRINT));
     }
 }

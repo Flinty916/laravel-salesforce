@@ -45,7 +45,7 @@ class SalesforceClient
         $this->instanceUrl = $auth['instance_url'];
     }
 
-    protected function fetchInstanceUrlFromToken(string $token): string
+    protected function fetchInstanceUrlFromToken(): string
     {
         return config('salesforce.login_url');
     }
@@ -87,29 +87,46 @@ class SalesforceClient
     public function post(string $uri, array|stdClass $data)
     {
         $url = rtrim($this->instanceUrl, '/') . $uri;
-        Log::debug($url);
-        Log::debug(json_encode($data));
         $response = Http::withToken($this->accessToken)
             ->contentType('application/json')
             ->acceptJson()
             ->post($url, $data);
-        Log::debug(json_encode($response->body(), JSON_PRETTY_PRINT));
         if ($response->status() == 400) {
             $errorResponse = json_decode($response->body(), true)[0];
             throw new SalesforceValidationException($errorResponse['message'], $errorResponse['fields'], 400);
         }
-        Log::debug("STATUS: " . $response->status() . " - " . $response->ok());
         throw_if($response->status() > 399, \Exception::class, 'Salesforce POST failed: ' . $response->body());
         return json_decode($response->body());
     }
 
-    public function put(string $uri, array $data = [])
+    public function put(string $uri, array|stdClass $data)
     {
-        return $this->request('put', $uri, $data);
+        $url = rtrim($this->instanceUrl, '/') . $uri;
+
+        $response = Http::withToken($this->accessToken)
+            ->contentType('application/json')
+            ->acceptJson()
+            ->patch($url, $data);
+        if ($response->status() == 400) {
+            $errorResponse = json_decode($response->body(), true)[0];
+            throw new SalesforceValidationException($errorResponse['message'], [], 400);
+        }
+        throw_if($response->status() > 399, \Exception::class, 'Salesforce PUT failed: ' . $response->body());
+        return json_decode($response->body());
     }
 
     public function delete(string $uri)
     {
-        return $this->request('delete', $uri);
+        $url = rtrim($this->instanceUrl, '/') . $uri;
+        $response = Http::withToken($this->accessToken)
+            ->contentType('application/json')
+            ->acceptJson()
+            ->delete($url);
+        if ($response->status() == 400) {
+            $errorResponse = json_decode($response->body(), true)[0];
+            throw new SalesforceValidationException($errorResponse['message'], [], 400);
+        }
+        throw_if($response->status() > 399, \Exception::class, 'Salesforce DELETE failed: ' . $response->body());
+        return json_decode($response->body());
     }
 }

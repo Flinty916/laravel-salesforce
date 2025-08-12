@@ -5,6 +5,7 @@ namespace Flinty916\LaravelSalesforce\SalesforceObjects;
 use Flinty916\LaravelSalesforce\Service\SalesforceClient;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use stdClass;
 
 class SalesforceQueryBuilder
 {
@@ -115,6 +116,18 @@ class SalesforceQueryBuilder
             $mapped[] = $record;
         }
         return $mapped;
+    }
+
+    public function first(): ?stdClass
+    {
+        $this->limit(1);
+        $this->get();
+
+        if (!empty($this->records()) && $this->records()->first()) {
+            return $this->records()->first();
+        }
+
+        return null;
     }
 
     public function total(): int
