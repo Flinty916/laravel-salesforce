@@ -4,7 +4,6 @@ namespace Flinty916\LaravelSalesforce\SalesforceObjects;
 
 use Flinty916\LaravelSalesforce\Service\SalesforceClient;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 use stdClass;
 
 class SalesforceQueryBuilder
@@ -167,8 +166,6 @@ class SalesforceQueryBuilder
         if ($this->limit !== null) {
             $query .= " LIMIT {$this->limit}";
         }
-
-        Log::debug($query);
 
         return $query;
     }

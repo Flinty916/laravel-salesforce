@@ -5,10 +5,7 @@ namespace Flinty916\LaravelSalesforce\Service;
 use Flinty916\LaravelSalesforce\Exceptions\SalesforceValidationException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
 use stdClass;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 class SalesforceClient
 {
@@ -50,33 +47,9 @@ class SalesforceClient
         return config('salesforce.login_url');
     }
 
-    protected function request(string $method, string $uri, array $options = [])
-    {
-        $url = rtrim($this->instanceUrl, '/') . '/services/data/v' . config('salesforce.api_version') . $uri;
-
-        Log::debug($url);
-        Log::debug($this->accessToken);
-
-        $response = Http::withToken($this->accessToken)
-            ->acceptJson()
-            ->retry(1, 100)
-            ->{$method}($url, $options);
-
-        if ($response->unauthorized()) {
-            Cache::forget(config('salesforce.cache.key_prefix') . 'access_token');
-            $this->authenticate();
-            return $this->request($method, $uri, $options);
-        }
-
-        return $response;
-    }
-
-
     public function get(string $uri, array $query = [])
     {
         $url = rtrim($this->instanceUrl, '/') . $uri;
-        Log::debug($this->accessToken);
-        Log::debug($url);
         $response = Http::withToken($this->accessToken)
             ->acceptJson()
             ->get($url, $query);
