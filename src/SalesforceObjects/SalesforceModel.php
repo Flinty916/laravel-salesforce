@@ -105,7 +105,7 @@ abstract class SalesforceModel
 
     public function delete(): void
     {
-        $response = $this->client()->delete('/services/data/v' . config('salesforce.api_version') . '/sobjects/' . static::$object . '/' . $this->Id);
+        $this->client()->delete('/services/data/v' . config('salesforce.api_version') . '/sobjects/' . static::$object . '/' . $this->Id);
     }
 
     // Properties:
