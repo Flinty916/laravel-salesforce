@@ -8,7 +8,7 @@ It includes a custom query builder, model base class, and an Artisan command to 
 Install via Composer:
 
 ```bash
-composer require your-vendor/laravel-salesforce
+composer require flinty916/laravel-salesforce
 ```
 
 ### Environment Variables
