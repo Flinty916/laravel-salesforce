@@ -14,14 +14,14 @@ abstract class SalesforceModel
     public ?string $Id = null;
 
     /** Bag for SFDC field values (raw or casted-in) */
-    protected array $attributes = [];
+    public array $attributes = [];
 
     /**
      * Supported: string|int|float|bool|date|datetime
      * e.g. ['CreatedDate' => 'datetime', 'OCT__c' => 'bool']
      * @var array<string,string>
      */
-    protected static array $casts = [];
+    public static array $casts = [];
 
     protected static function client(): SalesforceClient
     {
@@ -30,7 +30,7 @@ abstract class SalesforceModel
 
     public static function query(): SalesforceQueryBuilder
     {
-        return new SalesforceQueryBuilder(static::$object);
+        return new SalesforceQueryBuilder(static::$object, static::class);
     }
 
     public static function fields(array $fields): SalesforceQueryBuilder

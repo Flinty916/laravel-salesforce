@@ -4,11 +4,13 @@ namespace Flinty916\LaravelSalesforce\SalesforceObjects;
 
 use Flinty916\LaravelSalesforce\Service\SalesforceClient;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use stdClass;
 
 class SalesforceQueryBuilder
 {
     protected string $object;
+    protected string $modelClass;
     protected array $fields = ['Id'];
     protected array $whereClauses = [];
     protected array $orWhereClauses = [];
@@ -18,9 +20,10 @@ class SalesforceQueryBuilder
     protected int|null $total = null;
     protected string|null $nextPage = null;
 
-    public function __construct(string $object)
+    public function __construct(string $object, string $modelClass)
     {
         $this->object = $object;
+        $this->modelClass = $modelClass;
     }
 
     public function fields(array $fields): self
@@ -102,22 +105,31 @@ class SalesforceQueryBuilder
                 $url = $this->nextPage;
             }
         }
+        Log::debug(json_encode($this->records));
         return $this;
     }
 
     public function records(): Collection
     {
-        $mapped = collect([]);
         if (!isset($this->records) || $this->total() == 0)
             return collect([]);
-        foreach ($this->records as $record) {
-            unset($record->attributes);
-            $mapped[] = $record;
-        }
-        return $mapped;
+        $class = $this->modelClass; // e.g. EyeExam::class
+
+        return collect($this->records)->map(function ($record) use ($class) {
+            // Keep parity with find(): strip SFDC metadata and hydrate the model
+            if (isset($record->attributes)) {
+                unset($record->attributes);
+            }
+            Log::debug(json_encode($record));
+            $model = new $class();
+            foreach ((array)$record as $key => $value) {
+                $model->{$key} = $value;
+            }
+            return $model;
+        });
     }
 
-    public function first(): ?stdClass
+    public function first(): mixed
     {
         $this->limit(1);
         $this->get();
