@@ -2,7 +2,9 @@
 
 namespace Flinty916\LaravelSalesforce\Service;
 
+use Flinty916\LaravelSalesforce\Exceptions\SalesforceAuthenticationException;
 use Flinty916\LaravelSalesforce\Exceptions\SalesforceValidationException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use stdClass;
@@ -17,20 +19,42 @@ class SalesforceClient
         $this->authenticate();
     }
 
+    private function client_credentials_grant(): Response
+    {
+        return Http::asForm()->post(config('salesforce.login_url') . '/services/oauth2/token', [
+            'grant_type' => 'client_credentials',
+            'client_id' => config('salesforce.client_id'),
+            'client_secret' => config('salesforce.client_secret'),
+        ]);
+    }
+
+    private function password_grant(): Response
+    {
+        return Http::asForm()->post(config('salesforce.login_url') . '/services/oauth2/token', [
+            'grant_type' => 'password',
+            'client_id' => config('salesforce.client_id'),
+            'client_secret' => config('salesforce.client_secret'),
+            'username' => config('salesforce.username'),
+            'password' => config('salesforce.password') . config('salesforce.security_token'),
+        ]);
+    }
+
     protected function authenticate(): void
     {
         $cacheKey = config('salesforce.cache.key_prefix') . 'auth';
 
         $auth = Cache::remember($cacheKey, config('salesforce.cache.token_ttl'), function () {
-            $response = Http::asForm()->post(config('salesforce.login_url') . '/services/oauth2/token', [
-                'grant_type'    => 'password',
-                'client_id'     => config('salesforce.client_id'),
-                'client_secret' => config('salesforce.client_secret'),
-                'username'      => config('salesforce.username'),
-                'password'      => config('salesforce.password') . config('salesforce.security_token'),
-            ]);
+            $response = null;
+            if (config('salesforce.grant_type') == 'client_credentials') {
+                $response = $this->client_credentials_grant();
+            } else if (config('salesforce.grant_type') == 'password') {
+                $response = $this->password_grant();
+            }
 
-            throw_if(!$response->ok(), \Exception::class, 'Salesforce auth failed: ' . $response->body());
+            if (!$response->ok()) {
+                $error = json_decode($response->body(), true);
+                throw new SalesforceAuthenticationException($error['error'], $error['error_description'], 401);
+            }
 
             return [
                 'access_token' => $response['access_token'],

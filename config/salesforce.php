@@ -13,4 +13,5 @@ return [
         'key_prefix' => 'salesforce_',
         'token_ttl' => 60, // 1 minute
     ],
+    'grant_type' => env('SALESFORCE_GRANT_TYPE')
 ];

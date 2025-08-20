@@ -3,15 +3,12 @@
 namespace Flinty916\LaravelSalesforce\Exceptions;
 
 use Exception;
-use __IDE\LanguageLevelTypeAware;
-use __IDE\Pure;
 use Illuminate\Support\Facades\Log;
 
-class SalesforceValidationException extends Exception
+class SalesforceAuthenticationException extends Exception
 {
 
-    private array $fields = [];
-
+    private string $description;
     /**
      * Construct the exception. Note: The message is NOT binary safe.
      * @link https://php.net/manual/en/exception.construct.php
@@ -21,17 +18,22 @@ class SalesforceValidationException extends Exception
      */
     public function __construct(
         $message = "",
-        $fields = [],
+        $description = "",
         $code = 0,
         $previous = null
     ) {
         parent::__construct($message, $code, $previous);
-        $this->fields = $fields;
+        $this->description = $description;
     }
+
+    public function report() {}
 
     public function render($request)
     {
-        Log::error("Salesforce Valdation Error: {$this->message}");
-        return response()->json(["error" => true, "message" => $this->getMessage(), "fields" => $this->fields], $this->code);
+        Log::error("Salesforce Authentication Error: {$this->message}");
+        if ($request->expectsJson())
+            return response()->json(["error" => true, "message" => $this->getMessage(), "description" => $this->description], $this->code);
+        else
+            return abort($this->code, 'Salesforce Authentication Exception');
     }
 }
