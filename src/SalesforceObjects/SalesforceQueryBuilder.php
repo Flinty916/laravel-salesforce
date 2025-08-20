@@ -4,7 +4,6 @@ namespace Flinty916\LaravelSalesforce\SalesforceObjects;
 
 use Flinty916\LaravelSalesforce\Service\SalesforceClient;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 use stdClass;
 
 class SalesforceQueryBuilder
@@ -105,7 +104,6 @@ class SalesforceQueryBuilder
                 $url = $this->nextPage;
             }
         }
-        Log::debug(json_encode($this->records));
         return $this;
     }
 
@@ -120,7 +118,6 @@ class SalesforceQueryBuilder
             if (isset($record->attributes)) {
                 unset($record->attributes);
             }
-            Log::debug(json_encode($record));
             $model = new $class();
             foreach ((array)$record as $key => $value) {
                 $model->{$key} = $value;
