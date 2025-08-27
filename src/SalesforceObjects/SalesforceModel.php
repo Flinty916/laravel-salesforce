@@ -5,6 +5,8 @@ namespace Flinty916\LaravelSalesforce\SalesforceObjects;
 use Carbon\Carbon;
 use Flinty916\LaravelSalesforce\Service\SalesforceClient;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use Flinty916\LaravelSalesforce\SalesforceObjects\SalesforceDescription;
 use stdClass;
 
 abstract class SalesforceModel
@@ -106,6 +108,12 @@ abstract class SalesforceModel
         $this->client()->delete('/services/data/v' . config('salesforce.api_version') . '/sobjects/' . static::$object . '/' . $this->Id);
     }
 
+    public static function describe(): SalesforceDescription
+    {
+        $response = self::client()->get('/services/data/v' . config('salesforce.api_version') . '/sobjects/' . static::$object . '/describe');
+        return SalesforceDescription::fromArray((array) $response);
+    }
+
     // Properties:
 
     public static function fromArray(array $attributes): static
@@ -198,12 +206,12 @@ abstract class SalesforceModel
         $rule = static::$casts[$key] ?? null;
 
         return match ($rule) {
-            'int'       => (int) $value,
-            'float'     => (float) $value,
-            'bool'      => (bool) $value,
-            'string'    => (string) $value,
+            'int' => (int) $value,
+            'float' => (float) $value,
+            'bool' => (bool) $value,
+            'string' => (string) $value,
             'date', 'datetime' => $value instanceof Carbon ? $value : Carbon::parse($value),
-            default     => $value,
+            default => $value,
         };
     }
 
@@ -215,7 +223,7 @@ abstract class SalesforceModel
 
         return match ($rule) {
             'date', 'datetime' => ($value instanceof Carbon) ? $value : Carbon::parse($value),
-            default            => $value,
+            default => $value,
         };
     }
 }
