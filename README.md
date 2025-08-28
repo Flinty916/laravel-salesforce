@@ -22,15 +22,18 @@ Before using the package, you must configure your Salesforce credentials in your
 | `SALESFORCE_USERNAME`      | Salesforce username used for authentication.                                                                           |
 | `SALESFORCE_PASSWORD`      | Salesforce password **plus** security token (if required).                                                             |
 | `SALESFORCE_LOGIN_URL`     | Salesforce login URL — usually `https://login.salesforce.com` (production) or `https://test.salesforce.com` (sandbox). |
+| `SALESFORCE_GRANT_TYPE`    | Salesforce `grant_type` - currently supports `password` flow (legacy) and `client_credentials`                         |
+| `SALESFORCE_API_VERSION`   | Salesforce API version to use. Defaults to `58.0`                                                                      |
 
 #### Example .env
 
 ```env
 SALESFORCE_CLIENT_ID=your-client-id
 SALESFORCE_CLIENT_SECRET=your-client-secret
-SALESFORCE_USERNAME=your-username
-SALESFORCE_PASSWORD=your-password-and-token
+SALESFORCE_USERNAME=your-username // password grant type only
+SALESFORCE_PASSWORD=your-password-and-token // password grant type only
 SALESFORCE_LOGIN_URL=https://login.salesforce.com
+SALESFORCE_GRANT_TYPE=client_credentials
 ```
 
 ## Generating Salesforce Objects
@@ -108,4 +111,15 @@ $contact->update([
 ```php
 $contact = Contact::find('MyId');
 $contact->delete(); // Returns null
+```
+
+### Describe an Object
+
+Occasionally you'll need to obtain the metadata of an object, including Picklist values, fields, and more. This
+is the use case for the `describe` method, which returns the API response from a salesforce `sobject/<object>/describe`
+request.
+
+```php
+$description = Contact::describe(); // Returns SalesforceDescription
+$myPicklistValues = $description->fields->where('name', 'myField')->first()->picklistValues; // returns Collection of SalesforcePicklistValue
 ```
