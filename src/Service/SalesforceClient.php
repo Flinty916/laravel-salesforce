@@ -77,7 +77,8 @@ class SalesforceClient
         $response = Http::withToken($this->accessToken)
             ->acceptJson()
             ->get($url, $query);
-        throw_if(!$response->ok(), \Exception::class, 'Salesforce GET failed: ' . $response->body());
+
+        throw_if(!$response->ok(), \Exception::class, 'Salesforce GET failed (' . $url . '): ' . $response->body());
         return json_decode($response->body());
     }
 
@@ -92,7 +93,7 @@ class SalesforceClient
             $errorResponse = json_decode($response->body(), true)[0];
             throw new SalesforceValidationException($errorResponse['message'], $errorResponse['fields'], 400);
         }
-        throw_if($response->status() > 399, \Exception::class, 'Salesforce POST failed: ' . $response->body());
+        throw_if($response->status() > 399, \Exception::class, 'Salesforce POST failed (' . $url . '): ' . $response->body());
         return json_decode($response->body());
     }
 
@@ -108,7 +109,7 @@ class SalesforceClient
             $errorResponse = json_decode($response->body(), true)[0];
             throw new SalesforceValidationException($errorResponse['message'], [], 400);
         }
-        throw_if($response->status() > 399, \Exception::class, 'Salesforce PUT failed: ' . $response->body());
+        throw_if($response->status() > 399, \Exception::class, 'Salesforce PUT failed (' . $url . '): ' . $response->body());
         return json_decode($response->body());
     }
 
@@ -123,7 +124,7 @@ class SalesforceClient
             $errorResponse = json_decode($response->body(), true)[0];
             throw new SalesforceValidationException($errorResponse['message'], [], 400);
         }
-        throw_if($response->status() > 399, \Exception::class, 'Salesforce DELETE failed: ' . $response->body());
+        throw_if($response->status() > 399, \Exception::class, 'Salesforce DELETE failed (' . $url . '): ' . $response->body());
         return json_decode($response->body());
     }
 }
