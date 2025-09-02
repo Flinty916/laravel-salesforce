@@ -148,18 +148,23 @@ class SalesforceQueryBuilder
         $select = implode(', ', $this->fields);
         $query = "SELECT {$select} FROM {$this->object}";
 
+        $formatValue = function ($value) {
+            if (is_array($value)) {
+                return '(' . collect($value)->map(fn($v) => "'{$v}'")->implode(', ') . ')';
+            }
+            return "'{$value}'";
+        };
+
         if (!empty($this->whereClauses)) {
             $conditions = collect($this->whereClauses)->map(
-                fn($w) =>
-                "{$w[0]} {$w[1]} '" . addslashes($w[2]) . "'"
+                fn($w) => "{$w[0]} {$w[1]} " . $formatValue($w[2])
             )->implode(' AND ');
             $query .= " WHERE {$conditions}";
         }
 
         if (!empty($this->orWhereClauses)) {
             $ors = collect($this->orWhereClauses)->map(
-                fn($w) =>
-                "{$w[0]} {$w[1]} '" . addslashes($w[2]) . "'"
+                fn($w) => "{$w[0]} {$w[1]} " . $formatValue($w[2])
             )->implode(' OR ');
 
             $query .= empty($this->whereClauses)
@@ -168,7 +173,9 @@ class SalesforceQueryBuilder
         }
 
         if (!empty($this->orderBy)) {
-            $order = collect($this->orderBy)->map(fn($o) => "{$o[0]} {$o[1]}")->implode(', ');
+            $order = collect($this->orderBy)
+                ->map(fn($o) => "{$o[0]} {$o[1]}")
+                ->implode(', ');
             $query .= " ORDER BY {$order}";
         }
 
