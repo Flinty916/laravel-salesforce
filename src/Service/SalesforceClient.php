@@ -82,6 +82,17 @@ class SalesforceClient
         return json_decode($response->body());
     }
 
+    public function getRaw(string $uri, array $query = [])
+    {
+        $url = rtrim($this->instanceUrl, '/') . $uri;
+        $response = Http::withToken($this->accessToken)
+            ->acceptJson()
+            ->get($url, $query);
+
+        throw_if(!$response->ok(), \Exception::class, 'Salesforce GET failed (' . $url . '): ' . $response->body());
+        return $response->body();
+    }
+
     public function post(string $uri, array|stdClass $data)
     {
         $url = rtrim($this->instanceUrl, '/') . $uri;
