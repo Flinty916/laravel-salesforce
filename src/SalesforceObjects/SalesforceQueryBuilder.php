@@ -148,11 +148,21 @@ class SalesforceQueryBuilder
         $select = implode(', ', $this->fields);
         $query = "SELECT {$select} FROM {$this->object}";
 
-        $formatValue = function ($value) {
+        $formatLiteral = function ($value) {
+            if (is_bool($value)) {
+                return $value ? 'true' : 'false';
+            }
+            if (is_numeric($value)) {
+                return (string) $value;
+            }
+            return (string) $value;
+        };
+
+        $formatValue = function ($value) use ($formatLiteral) {
             if (is_array($value)) {
                 return '(' . collect($value)->map(fn($v) => "'{$v}'")->implode(', ') . ')';
             }
-            return "'{$value}'";
+            return $formatLiteral($value);
         };
 
         if (!empty($this->whereClauses)) {
