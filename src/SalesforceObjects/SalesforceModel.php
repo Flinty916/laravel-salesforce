@@ -3,6 +3,8 @@
 namespace Flinty916\LaravelSalesforce\SalesforceObjects;
 
 use Carbon\Carbon;
+use Flinty916\LaravelSalesforce\SalesforceObjects\Chatter\SalesforceChatter;
+use Flinty916\LaravelSalesforce\SalesforceObjects\Chatter\SalesforceChatterResponse;
 use Flinty916\LaravelSalesforce\Service\SalesforceClient;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -112,6 +114,11 @@ abstract class SalesforceModel
     {
         $response = self::client()->get('/services/data/v' . config('salesforce.api_version') . '/sobjects/' . static::$object . '/describe');
         return SalesforceDescription::fromArray((array) $response);
+    }
+
+    public function chatter()
+    {
+        return new SalesforceChatter($this->Id);
     }
 
     // Properties:
