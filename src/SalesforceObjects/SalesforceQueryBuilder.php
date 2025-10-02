@@ -15,6 +15,7 @@ class SalesforceQueryBuilder
     protected array $orWhereClauses = [];
     protected array $orderBy = [];
     protected ?int $limit = null;
+    protected ?int $offset = null;
     protected Collection|null $records = null;
     protected int|null $total = null;
     protected string|null $nextPage = null;
@@ -66,6 +67,12 @@ class SalesforceQueryBuilder
     public function limit(int $limit): self
     {
         $this->limit = $limit;
+        return $this;
+    }
+
+    public function offset(int $offset): static
+    {
+        $this->offset = $offset;
         return $this;
     }
 
@@ -155,6 +162,21 @@ class SalesforceQueryBuilder
             if (is_numeric($value)) {
                 return (string) $value;
             }
+            if ($value instanceof \DateTimeInterface) {
+                if ($value->format('H:i:s') === '00:00:00') {
+                    return $value->format('Y-m-d');
+                }
+                return $value->format('Y-m-d\TH:i:s\Z');
+            }
+
+            if (is_string($value)) {
+                if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+                    return $value;
+                }
+                if (preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $value)) {
+                    return $value;
+                }
+            }
             return "'" . str_replace("'", "\\'", $value) . "'";
         };
 
@@ -191,7 +213,11 @@ class SalesforceQueryBuilder
 
         if ($this->limit !== null) {
             $query .= " LIMIT {$this->limit}";
+            if ($this->offset !== null) {
+                $query .= " OFFSET {$this->offset}";
+            }
         }
+
 
         return $query;
     }
