@@ -87,6 +87,14 @@ abstract class SalesforceModel
         return $model;
     }
 
+    public static function count(): ?int
+    {
+        $response = self::client()->get('/services/data/v' . config('salesforce.api_version') . '/query/', ['q' => 'SELECT COUNT() FROM ' . static::$object]);
+        if ($response->done == true)
+            return $response->totalSize;
+        return -1;
+    }
+
     public static function records(): Collection
     {
         return static::query()->records();
