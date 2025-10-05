@@ -123,3 +123,85 @@ request.
 $description = Contact::describe(); // Returns SalesforceDescription
 $myPicklistValues = $description->fields->where('name', 'myField')->first()->picklistValues; // returns Collection of SalesforcePicklistValue
 ```
+
+## Working with Chatter Feeds
+
+This package includes first-class support for Salesforce Chatter feeds, allowing you to retrieve, post, update, and comment on feed items related to any Salesforce record (e.g., an Opportunity, Account, or Case).
+
+### Retrieving Feed Items
+
+You can access a record’s chatter feed through the chatter() helper:
+```php
+$opportunity = Opportunity::find('0068d00000ABC123');
+
+$feed = $opportunity->chatter()->all();
+
+// Returns a collection of feed elements (posts, comments, files, etc.)
+foreach ($feed as $element) {
+    echo $element['actor']['displayName'] . ': ' . $element['body']['text'];
+}
+```
+
+Under the hood, this calls the Salesforce Chatter REST API:
+```
+GET /services/data/v{api_version}/chatter/feeds/record/{recordId}/feed-elements
+```
+and automatically maps the response into PHP objects for easy access.
+
+### Posting a New Message
+
+To create a new post on a record’s feed, call post():
+```php
+$opportunity->chatter()->post('We should increase the deal size to £200k.');
+```
+
+This issues a POST request to:
+```
+POST /services/data/v{api_version}/chatter/feed-elements
+```
+and creates a FeedItem linked to the record.
+
+### Updating a Message
+
+If you need to edit a feed message (your own post), you can use update():
+```php
+$opportunity->chatter()->update('0D5xx00000ABCDe', 'Updated deal size to £250k.');
+```
+
+This sends a PATCH request to:
+```
+PATCH /services/data/v{api_version}/chatter/feed-elements/{feedElementId}
+```
+and updates the feed item’s body content.
+
+### Commenting on a Message
+
+To add a comment to an existing feed item, use comment():
+```php
+$opportunity->chatter()->comment('0D5xx00000ABCDe', 'Agreed — let’s go for it.');
+```
+This issues a POST request to:
+```
+POST /services/data/v{api_version}/chatter/feed-elements/{feedElementId}/capabilities/comments/items
+```
+and appends a new FeedComment to the specified post.
+
+### Example Workflow
+```php
+$opportunity = Opportunity::find('0068d00000ABC123');
+
+// Post a message
+$post = $opportunity->chatter()->post('Initial quote sent to client.');
+
+// Add a follow-up comment
+$opportunity->chatter()->comment($post['id'], 'Client requested updated pricing.');
+
+// Retrieve all feed items
+$feed = $opportunity->chatter()->all();
+```
+
+### Notes
+
+Feed actions are available for any Salesforce record with an associated Chatter feed (FeedEnabled objects).
+Returned data is normalized through SalesforceChatterResponse, so you can iterate and inspect feed elements easily.
+Posting and commenting automatically handle message segment formatting — plain text is supported by default, but future versions will support rich mentions, links, and file attachments.
